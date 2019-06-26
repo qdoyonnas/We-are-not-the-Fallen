@@ -6,6 +6,7 @@ public class Block : MonoBehaviour
 {
     public float massFactor = 1f;
     public bool hazard = false;
+    public bool fragile = false;
     
     public float checkDestroyTime = 1f;
     public float destroyDistance = 30f;
@@ -16,6 +17,8 @@ public class Block : MonoBehaviour
 
     new public Rigidbody rigidbody;
     float checkDestroyTimeStamp = -1f;
+
+    public float collisionKillRangeModifier = 0.002f;
 
     AudioSource impactSource;
 
@@ -53,13 +56,13 @@ public class Block : MonoBehaviour
         Block block = collision.gameObject.GetComponent<Block>();
         if( block != null ) {
             float distance = Vector3.Distance(GameManager.Instance.player.transform.position, transform.position);
-            float intensity = collision.impulse.magnitude * (shakeDistanceValue / distance) * 0.004f;
+            float intensity = collision.impulse.magnitude * (shakeDistanceValue / distance) * 0.002f;
             GameManager.Instance.activeCamera.CameraShake(0.5f, intensity);
 
             intensity = collision.impulse.magnitude * 0.004f;
-            ParticleEmitter impactEmitter = Instantiate<GameObject>(impactParticles, collision.GetContact(0).point, Quaternion.identity).GetComponent<ParticleEmitter>();
+            ParticleEmitter impactEmitter = Instantiate<GameObject>(impactParticles, collision.GetContact(0).point, Quaternion.identity, GameManager.Instance.emitterContainer).GetComponent<ParticleEmitter>();
             impactEmitter.Expand(intensity);
-            ParticleEmitter stoneEmitter = Instantiate<GameObject>(stoneParticles, collision.GetContact(0).point, Quaternion.identity).GetComponent<ParticleEmitter>();
+            ParticleEmitter stoneEmitter = Instantiate<GameObject>(stoneParticles, collision.GetContact(0).point, Quaternion.identity, GameManager.Instance.emitterContainer).GetComponent<ParticleEmitter>();
             stoneEmitter.Expand(intensity);
 
             if( impactSource != null ) {
@@ -67,6 +70,11 @@ public class Block : MonoBehaviour
                 impactSource.volume = intensity * 0.3f;
                 impactSource.Stop();
                 impactSource.Play();
+            }
+
+            //Debug.Log(collision.impulse.magnitude * collisionKillRangeModifier);
+            if( Vector3.Distance(GameManager.Instance.player.transform.position, collision.GetContact(0).point) < (collision.impulse.magnitude * collisionKillRangeModifier) ) {
+                GameManager.Instance.player.Die();
             }
         }
     }

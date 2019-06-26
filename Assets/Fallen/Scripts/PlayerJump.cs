@@ -135,6 +135,7 @@ public class PlayerJump : MonoBehaviour
         if( block != null ) {
             if( block.hazard ) {
                 Die();
+                return;
             }
 
             if( !grounded ) {
@@ -154,7 +155,7 @@ public class PlayerJump : MonoBehaviour
 
                 rigidbody.mass = defaultMass;
 
-                float shakeFactor = dashTimeStamp != -1f ? 0.05f : 0.03f;
+                float shakeFactor = dashTimeStamp != -1f ? 0.03f : 0.01f;
                 GameManager.Instance.activeCamera.CameraShake(0.2f, storedVelocity * shakeFactor);
                 if( effectSource != null ) {
                     effectSource.pitch = Random.Range(0.6f, 2f);
@@ -163,7 +164,7 @@ public class PlayerJump : MonoBehaviour
                     effectSource.Play();
                 }
 
-                ParticleEmitter impactEmitter = Instantiate<GameObject>(impactParticles, transform.position, transform.rotation).GetComponent<ParticleEmitter>();
+                ParticleEmitter impactEmitter = Instantiate<GameObject>(impactParticles, transform.position, transform.rotation, GameManager.Instance.emitterContainer).GetComponent<ParticleEmitter>();
                 impactEmitter.Expand( (storedVelocity / impactSpeedValue) * 0.5f );
                 if( dashTimeStamp != -1f ) {
                     ParticleEmitter stoneEmitter = Instantiate<GameObject>(stoneParticles, transform.position, transform.rotation).GetComponent<ParticleEmitter>();
@@ -183,6 +184,9 @@ public class PlayerJump : MonoBehaviour
     {
         isAlive = false;
         GetComponent<MeshRenderer>().enabled = false;
+
+        rigidbody.velocity = Vector3.zero;
+        rigidbody.useGravity = false;
 
         effectSource.clip = squishSound;
         effectSource.volume = 1f;

@@ -248,10 +248,18 @@ MonoBehaviour:
   spawnSpinRange: 1.2
   spawnTime: 0.02
   spawnCushion: 5
-  spawnClusterRange: 30
+  clusterChance: 0.002
+  rainChance: 0.005
   rogueChance: 0.05
   hazardChance: 0.3
-  clusterChance: 0.005
+  rogueMinVelocityMult: 2
+  rogueMaxVelocityMult: 4
+  rainScaleRange: 2
+  rainMinCount: 8
+  rainMaxCount: 24
+  spawnClusterRange: 30
+  blocksContainer: {fileID: 0}
+  emitterContainer: {fileID: 0}
 --- !u!1 &948351506
 GameObject:
   m_ObjectHideFlags: 0
@@ -284,6 +292,7 @@ SpriteRenderer:
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -308,7 +317,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 8e8571654b9903c428d835f25c33ef0f, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 36dfb6cd7e1dd424b8a38bebe745b3a5, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -460,6 +469,7 @@ SpriteRenderer:
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -484,7 +494,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 8e8571654b9903c428d835f25c33ef0f, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 36dfb6cd7e1dd424b8a38bebe745b3a5, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -556,6 +566,7 @@ SpriteRenderer:
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -580,7 +591,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 8e8571654b9903c428d835f25c33ef0f, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 36dfb6cd7e1dd424b8a38bebe745b3a5, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -661,7 +672,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-    m_TypeName: UnityEngine.UI.MaskableGraphic+CullStateChangedEvent, Unity.ugui,
+    m_TypeName: UnityEngine.UI.MaskableGraphic+CullStateChangedEvent, UnityEngine.UI,
       Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
@@ -737,6 +748,7 @@ MeshRenderer:
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:

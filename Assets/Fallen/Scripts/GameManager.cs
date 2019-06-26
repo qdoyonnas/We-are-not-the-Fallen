@@ -28,23 +28,36 @@ public class GameManager : MonoBehaviour
     public float spawnSpinRange = 15f;
     public float spawnTime = 0.1f;
     public float spawnCushion = 5f;
-    public float spawnClusterRange = 30f;
 
     float spawnTimeStamp = -1f;
 
     [Header("Spawn Chances")]
+    public float clusterChance = 0.005f;
+    public float rainChance = 0.01f;
+
     public float rogueChance = 0.05f;
     public float hazardChance = 0.15f;
-    public float clusterChance = 0.01f;
+
+    int rainCount = -1;
+
+    [Header("Special Spawning")]
+    public float rogueMinVelocityMult = 2f;
+    public float rogueMaxVelocityMult = 4f;
+    public float rainScaleRange = 2f;
+    public int rainMinCount = 3;
+    public int rainMaxCount = 12;
+    public float spawnClusterRange = 30f;
 
     GameObject blockPrefab;
     GameObject hazardPrefab;
-    Transform blocksContainer;
+
+    [HideInInspector] public Transform blocksContainer;
+    [HideInInspector] public Transform emitterContainer;
 
     public enum BlockType {
         rogue,
         hazard,
-        cluster
+        fragile
     }
 
     private void Awake()
@@ -63,6 +76,7 @@ public class GameManager : MonoBehaviour
     private void SetupGame()
     {
         blocksContainer = new GameObject("blocksContainer").transform;
+        emitterContainer = new GameObject("emitterContainer").transform;
 
         Vector3 spawnPosition = new Vector3(player.transform.position.x, player.transform.position.y - 5, 0);
         Block block = Instantiate<GameObject>(blockPrefab, spawnPosition, Quaternion.identity, blocksContainer).GetComponent<Block>();
@@ -74,7 +88,7 @@ public class GameManager : MonoBehaviour
 
         int failCount = 0;
         do {
-            if( !SpawnRandomBlock( Vector3.zero, spawnDistance, spawnScaleRange * 0.5f, 15f, spawnVelocityRange * 0.3f, spawnSpinRange, new List<BlockType>(), false) ) {
+            if( !SpawnRandomBlock( Vector3.zero, spawnDistance, spawnScaleRange * 0.5f, 15f, spawnVelocityRange * 0.3f, spawnSpinRange, new List<BlockType>(), new List<BlockType>(), false) ) {
                 failCount++;
             } else {
                 failCount = 0;
@@ -85,25 +99,8 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if( Time.time > spawnTimeStamp ) {
-            if( player.rigidbody.velocity.magnitude <= 0 ) { return; }
-
-            Vector3 spawnCenter = player.transform.position + (player.rigidbody.velocity.normalized * spawnDistance);
-
-            float clusterRoll = Random.value;
-            if( clusterRoll <= clusterChance ) {
-                int failCount = 0;
-                do {
-                    if( !SpawnRandomBlock( spawnCenter, spawnClusterRange, spawnScaleRange, spawnCushion * 0.5f, spawnVelocityRange, spawnSpinRange, new List<BlockType>(new BlockType[] { BlockType.hazard }) ) ) {
-                        failCount++;
-                    } else {
-                        failCount = 0;
-                    }
-                } while( failCount <= 10 );
-            } else {
-                SpawnRandomBlock( spawnCenter, spawnOffset, spawnScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(new BlockType[] { BlockType.hazard, BlockType.rogue }) );
-            }
-
+        if( Time.time > spawnTimeStamp || rainCount > 0 ) {
+            HandleBlockSpawning();
             spawnTimeStamp = Time.time + spawnTime;
         }
 
@@ -121,7 +118,54 @@ public class GameManager : MonoBehaviour
         }
     }
     
-    private bool SpawnRandomBlock(Vector3 spawnCenter, float spawnRange, float scaleRange, float cushion, float velocityRange, float spinRange, List<BlockType> possibleblockTypes, bool checkDistance = true)
+    private void HandleBlockSpawning()
+    {
+        if( player.rigidbody.velocity.magnitude <= 0 ) { return; }
+
+        Vector3 spawnCenter = player.transform.position + (player.rigidbody.velocity.normalized * spawnDistance);
+
+        // Continued Rain
+        if( rainCount > 0 ) {
+            int failCount = 0;
+            do {
+                if( !SpawnRandomBlock( spawnCenter, spawnOffset, rainScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(new BlockType[] { BlockType.hazard }), new List<BlockType>(new BlockType[] { BlockType.rogue, BlockType.fragile }) ) ) {
+                    failCount++;
+                } else {
+                    break;
+                }
+            } while( failCount <= 4 );
+
+            rainCount--;
+
+            return;
+        }
+
+        // Cluster
+        float roll = Random.value;
+        if( roll <= clusterChance ) {
+            int failCount = 0;
+            do {
+                if( !SpawnRandomBlock( spawnCenter, spawnClusterRange, spawnScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(new BlockType[] { BlockType.hazard, BlockType.fragile }), new List<BlockType>() ) ) {
+                    failCount++;
+                } else {
+                    failCount = 0;
+                }
+            } while( failCount <= 10 );
+
+            return;
+        }
+
+        // Rain
+        roll = Random.value;
+        if( roll <= rainChance ) {
+            rainCount = Random.Range(rainMinCount, rainMaxCount);
+            
+            return;
+        }
+
+        SpawnRandomBlock( spawnCenter, spawnOffset, spawnScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(new BlockType[] { BlockType.rogue, BlockType.hazard, BlockType.fragile }), new List<BlockType>() );
+    }
+    private bool SpawnRandomBlock(Vector3 spawnCenter, float spawnRange, float scaleRange, float cushion, float velocityRange, float spinRange, List<BlockType> possibleblockTypes, List<BlockType> forceBlockTypes, bool checkDistance = true)
     {
         Vector3 spawnPosition = new Vector3(spawnCenter.x + Random.Range(-spawnRange, spawnRange), spawnCenter.y + Random.Range(-spawnRange, spawnRange), 0);
 
@@ -133,20 +177,28 @@ public class GameManager : MonoBehaviour
 
         List<BlockType> blockTypes = new List<BlockType>();
         // Rogue
-        if( possibleblockTypes.Contains(BlockType.rogue) ) {
+        if( possibleblockTypes.Contains(BlockType.rogue) || forceBlockTypes.Contains(BlockType.rogue) ) {
             float roll = Random.value;
-            if( roll <= rogueChance ) {
-                speedMagnitude = Random.Range(spawnVelocityRange * 2, spawnVelocityRange * 3);
+            if( roll <= rogueChance || forceBlockTypes.Contains(BlockType.rogue) ) {
+                speedMagnitude = Random.Range(spawnVelocityRange * rogueMinVelocityMult, spawnVelocityRange * rogueMaxVelocityMult);
                 Vector3 attackVector = (player.transform.position - spawnPosition).normalized;
                 velocity = attackVector * speedMagnitude;
             }
         }
         
         // Hazard
-        if( possibleblockTypes.Contains(BlockType.hazard) ) {
+        if( possibleblockTypes.Contains(BlockType.hazard) || forceBlockTypes.Contains(BlockType.hazard) ) {
             float roll = Random.value;
-            if( roll <= hazardChance ) {
+            if( roll <= hazardChance || forceBlockTypes.Contains(BlockType.hazard) ) {
                 blockTypes.Add(BlockType.hazard);
+            }
+        }
+
+        // Fragile
+        if( possibleblockTypes.Contains(BlockType.fragile) || forceBlockTypes.Contains(BlockType.fragile) ) {
+            float roll = Random.value;
+            if( roll <= hazardChance || forceBlockTypes.Contains(BlockType.fragile) ) {
+                blockTypes.Add(BlockType.fragile);
             }
         }
 
@@ -169,12 +221,25 @@ public class GameManager : MonoBehaviour
         block.rigidbody.velocity = velocity;
         block.rigidbody.angularVelocity = new Vector3(0f, 0f, spin);
 
+        /*
+        foreach( BlockType type in blockTypes ) {
+            switch( type ) {
+                case BlockType.fragile:
+
+                    break;
+                case BlockType.hazard:
+
+                    break;
+            }
+        }*/
+
         return true;
     }
 
     public void ResetGame()
     {
         Destroy(blocksContainer.gameObject);
+        Destroy(emitterContainer.gameObject);
         score = 0;
         scoreText.text = "0";
 

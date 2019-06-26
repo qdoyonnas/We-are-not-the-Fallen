@@ -58,6 +58,7 @@ MeshRenderer:
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -124,6 +125,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   massFactor: 1.5
+  hazard: 0
   checkDestroyTime: 1
   destroyDistance: 100
   shakeDistanceValue: 10
@@ -132,6 +134,7 @@ MonoBehaviour:
   stoneParticles: {fileID: 1195915722925264058, guid: 817f4da51ba3ebb4f9f3341f1cc4fec0,
     type: 3}
   rigidbody: {fileID: 0}
+  collisionKillRangeModifier: 0.01
 --- !u!82 &4623515119534735792
 AudioSource:
   m_ObjectHideFlags: 0
