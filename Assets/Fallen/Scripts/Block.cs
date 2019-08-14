@@ -5,8 +5,7 @@ using UnityEngine;
 public class Block : MonoBehaviour
 {
     public float massFactor = 1f;
-    public bool hazard = false;
-    public bool fragile = false;
+    public List<GameManager.BlockType> blockTypes;
     
     public float checkDestroyTime = 1f;
     public float destroyDistance = 30f;
@@ -19,6 +18,8 @@ public class Block : MonoBehaviour
     float checkDestroyTimeStamp = -1f;
 
     public float collisionKillRangeModifier = 0.002f;
+
+    public float fragileDestructionThreshold = 10f;
 
     AudioSource impactSource;
 
@@ -37,6 +38,28 @@ public class Block : MonoBehaviour
     {
         transform.localScale = scale;
         rigidbody.mass = massFactor * (transform.localScale.x * transform.localScale.y);
+    }
+    public void SetTypes( List<GameManager.BlockType> types )
+    {
+        blockTypes = types;
+
+        Destroy(transform.GetChild(0).gameObject);
+
+        string prefabName;
+        if( blockTypes.Contains(GameManager.BlockType.hazard) ) {
+            prefabName = "Hazard";
+        } else {
+            prefabName = "Standard";
+        }
+
+        if( blockTypes.Contains(GameManager.BlockType.fragile) ) {
+            prefabName += "Fragile";
+        }
+
+        GameObject prefab = Resources.Load<GameObject>("Prefabs/" + prefabName);
+        if( prefab != null ) {
+            Instantiate<GameObject>(prefab, transform);
+        }
     }
 
     private void Update()
@@ -72,9 +95,15 @@ public class Block : MonoBehaviour
                 impactSource.Play();
             }
 
-            //Debug.Log(collision.impulse.magnitude * collisionKillRangeModifier);
             if( Vector3.Distance(GameManager.Instance.player.transform.position, collision.GetContact(0).point) < (collision.impulse.magnitude * collisionKillRangeModifier) ) {
                 GameManager.Instance.player.Die();
+            }
+
+            if( blockTypes.Contains(GameManager.BlockType.fragile) && collision.impulse.magnitude > fragileDestructionThreshold ) {
+                Destroy(gameObject);
+
+                stoneEmitter = Instantiate<GameObject>(stoneParticles, transform.position, Quaternion.identity, GameManager.Instance.emitterContainer).GetComponent<ParticleEmitter>();
+                stoneEmitter.Expand(transform.localScale.magnitude * 0.3f);
             }
         }
     }

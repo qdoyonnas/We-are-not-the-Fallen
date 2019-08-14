@@ -246,10 +246,10 @@ MonoBehaviour:
   spawnDistance: 60
   spawnVelocityRange: 10
   spawnSpinRange: 1.2
-  spawnTime: 0.02
+  spawnTime: 0.04
   spawnCushion: 5
-  clusterChance: 0.002
-  rainChance: 0.005
+  clusterChance: 0.01
+  rainChance: 0.001
   rogueChance: 0.05
   hazardChance: 0.3
   rogueMinVelocityMult: 2

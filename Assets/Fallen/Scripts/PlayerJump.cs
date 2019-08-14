@@ -80,8 +80,14 @@ public class PlayerJump : MonoBehaviour
         }
 
         if( grounded ) {
-            transform.position = anchor.transform.position;
-            transform.rotation = anchor.transform.rotation;
+            if( anchor == null ) {
+                rigidbody.useGravity = true;
+                rigidbody.drag = airFriction;
+                grounded = false;
+            }  else {
+                transform.position = anchor.transform.position;
+                transform.rotation = anchor.transform.rotation;
+            }
         }
 
         storedVelocity = rigidbody.velocity.magnitude;
@@ -111,15 +117,11 @@ public class PlayerJump : MonoBehaviour
             } else if( canDash ) {
                 canDash = false;
 
-                // rigidbody.velocity = Vector3.zero;
-                  
                 Vector3 mousePos = GameManager.Instance.activeCamera.camera.ScreenToWorldPoint(Input.mousePosition);
                 mousePos.z = 0;
                 Vector3 jumpVector = -(transform.position - mousePos).normalized;
                 rigidbody.AddForce(jumpVector * dashFactor);
                 
-                //rigidbody.AddForce(rigidbody.velocity.normalized * dashFactor);
-
                 rigidbody.mass *= dashMassFactor;
 
                 dashTimeStamp = Time.time + dashDuration;
@@ -133,7 +135,7 @@ public class PlayerJump : MonoBehaviour
 
         Block block = collision.gameObject.GetComponent<Block>();
         if( block != null ) {
-            if( block.hazard ) {
+            if( block.blockTypes.Contains(GameManager.BlockType.hazard) ) {
                 Die();
                 return;
             }

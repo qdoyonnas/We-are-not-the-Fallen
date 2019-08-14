@@ -37,6 +37,7 @@ public class GameManager : MonoBehaviour
 
     public float rogueChance = 0.05f;
     public float hazardChance = 0.15f;
+    public float fragileChance = 0.10f;
 
     int rainCount = -1;
 
@@ -49,7 +50,6 @@ public class GameManager : MonoBehaviour
     public float spawnClusterRange = 30f;
 
     GameObject blockPrefab;
-    GameObject hazardPrefab;
 
     [HideInInspector] public Transform blocksContainer;
     [HideInInspector] public Transform emitterContainer;
@@ -67,7 +67,6 @@ public class GameManager : MonoBehaviour
         _instance = this;
 
         blockPrefab = Resources.Load<GameObject>("Prefabs/Block");
-        hazardPrefab = Resources.Load<GameObject>("Prefabs/Hazard");
     }
     private void Start()
     {
@@ -197,7 +196,7 @@ public class GameManager : MonoBehaviour
         // Fragile
         if( possibleblockTypes.Contains(BlockType.fragile) || forceBlockTypes.Contains(BlockType.fragile) ) {
             float roll = Random.value;
-            if( roll <= hazardChance || forceBlockTypes.Contains(BlockType.fragile) ) {
+            if( roll <= fragileChance || forceBlockTypes.Contains(BlockType.fragile) ) {
                 blockTypes.Add(BlockType.fragile);
             }
         }
@@ -214,24 +213,12 @@ public class GameManager : MonoBehaviour
     }
     private bool SpawnBlock(Vector3 spawnPosition, Vector3 spawnScale, Vector3 velocity, float spin, List<BlockType> blockTypes)
     {
-        GameObject prefab = blockTypes.Contains(BlockType.hazard) ? hazardPrefab : blockPrefab;
-        Block block = Instantiate<GameObject>( prefab, spawnPosition, Quaternion.AngleAxis(Random.Range(0, 360), transform.forward), blocksContainer ).GetComponent<Block>();
+        Block block = Instantiate<GameObject>( blockPrefab, spawnPosition, Quaternion.AngleAxis(Random.Range(0, 360), transform.forward), blocksContainer ).GetComponent<Block>();
         block.SetScale(spawnScale);
+        block.SetTypes(blockTypes);
             
         block.rigidbody.velocity = velocity;
         block.rigidbody.angularVelocity = new Vector3(0f, 0f, spin);
-
-        /*
-        foreach( BlockType type in blockTypes ) {
-            switch( type ) {
-                case BlockType.fragile:
-
-                    break;
-                case BlockType.hazard:
-
-                    break;
-            }
-        }*/
 
         return true;
     }
