@@ -6,6 +6,10 @@ public class PlayerJump : MonoBehaviour
 {
     public bool isAlive = true;
 
+    [Header("Controls")]
+    public float airMove = 10f;
+    public float maxAirMove = 50f;
+
     [Header("Physics")]
     public float jumpFactor = 1f;
     public float dashFactor = 0.5f;
@@ -35,7 +39,7 @@ public class PlayerJump : MonoBehaviour
     GameObject stoneParticles;
 
     // Components
-    new public Rigidbody rigidbody;
+    [HideInInspector] new public Rigidbody rigidbody;
     new CapsuleCollider collider;
     float defaultMass;
 
@@ -100,7 +104,6 @@ public class PlayerJump : MonoBehaviour
         if( !isAlive ) { return; }
 
         if( Input.GetMouseButtonDown(0) ) {
-
             if( grounded ) {
                 rigidbody.useGravity = true;
                 rigidbody.drag = airFriction;
@@ -127,6 +130,19 @@ public class PlayerJump : MonoBehaviour
                 dashTimeStamp = Time.time + dashDuration;
             }
         }
+
+        if( !grounded ) {
+            if( Input.GetKey(KeyCode.A) ) {
+                if( rigidbody.velocity.x > -maxAirMove ) {
+                    rigidbody.AddForce(Vector3.left * airMove);
+                }
+            }
+            if( Input.GetKey(KeyCode.D) ) {
+                if( rigidbody.velocity.x < maxAirMove ) {
+                    rigidbody.AddForce(Vector3.right * airMove);
+                }
+            }
+        }
     }
 
     private void OnCollisionEnter( Collision collision )
@@ -140,6 +156,11 @@ public class PlayerJump : MonoBehaviour
                 return;
             }
 
+            if( block.blockTypes.Contains(GameManager.BlockType.goal) ) {
+                block.SetTypes(new List<GameManager.BlockType>());
+                GameManager.Instance.ScoreGoal();
+            }
+
             if( !grounded ) {
                 grounded = true;
                 canDash = true;
@@ -150,7 +171,7 @@ public class PlayerJump : MonoBehaviour
                 transform.rotation = Quaternion.LookRotation(transform.forward, contact.normal);
                 transform.position = contact.point + (transform.up * (transform.localScale.y * 0.5f));
 
-                anchor = new GameObject("AnchorPoint");
+                if( anchor == null ) { anchor = new GameObject("AnchorPoint"); }
                 anchor.transform.position = contact.point + (contact.normal * (transform.localScale.y * 0.5f));
                 anchor.transform.rotation = Quaternion.LookRotation(transform.forward, contact.normal);
                 anchor.transform.parent = collision.gameObject.transform;
@@ -182,6 +203,12 @@ public class PlayerJump : MonoBehaviour
         }
     }
 
+    public bool IsOnObject(GameObject gameObject)
+    {
+        if( anchor == null || anchor.transform.parent == null ) { return false; }
+        return gameObject.transform == anchor.transform.parent;
+    }
+
     public void Die()
     {
         isAlive = false;
@@ -189,6 +216,12 @@ public class PlayerJump : MonoBehaviour
 
         rigidbody.velocity = Vector3.zero;
         rigidbody.useGravity = false;
+
+        if( anchor == null ) { anchor = new GameObject("AnchorPoint"); }
+        anchor.transform.position = transform.position;
+        anchor.transform.parent = null;
+
+        GameManager.Instance.savedScore = GameManager.Instance.GetTotalScore();
 
         effectSource.clip = squishSound;
         effectSource.volume = 1f;
@@ -203,7 +236,7 @@ public class PlayerJump : MonoBehaviour
 
         grounded = false;
         canDash = false;
-        anchor = null;
+        Destroy(anchor);
         rigidbody.drag = airFriction;
         rigidbody.useGravity = true;
 

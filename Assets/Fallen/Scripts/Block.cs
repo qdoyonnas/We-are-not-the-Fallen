@@ -8,7 +8,7 @@ public class Block : MonoBehaviour
     public List<GameManager.BlockType> blockTypes;
     
     public float checkDestroyTime = 1f;
-    public float destroyDistance = 30f;
+    public float destroyDistance = 240;
 
     public float shakeDistanceValue = 50f;
     public GameObject impactParticles;
@@ -17,9 +17,10 @@ public class Block : MonoBehaviour
     new public Rigidbody rigidbody;
     float checkDestroyTimeStamp = -1f;
 
-    public float collisionKillRangeModifier = 0.002f;
+    public float collisionKillRangeModifier = 0.005f;
 
-    public float fragileDestructionThreshold = 10f;
+    public float baseDestructionThreshold = 5;
+    private float destructionThreshold = 5;
 
     AudioSource impactSource;
 
@@ -37,7 +38,8 @@ public class Block : MonoBehaviour
     public void SetScale( Vector3 scale )
     {
         transform.localScale = scale;
-        rigidbody.mass = massFactor * (transform.localScale.x * transform.localScale.y);
+        rigidbody.mass = massFactor * GetSize();
+        destructionThreshold = baseDestructionThreshold * GetSize();
     }
     public void SetTypes( List<GameManager.BlockType> types )
     {
@@ -46,14 +48,10 @@ public class Block : MonoBehaviour
         Destroy(transform.GetChild(0).gameObject);
 
         string prefabName;
-        if( blockTypes.Contains(GameManager.BlockType.hazard) ) {
-            prefabName = "Hazard";
+        if( blockTypes.Contains(GameManager.BlockType.goal) ) {
+            prefabName = "Goal";
         } else {
             prefabName = "Standard";
-        }
-
-        if( blockTypes.Contains(GameManager.BlockType.fragile) ) {
-            prefabName += "Fragile";
         }
 
         GameObject prefab = Resources.Load<GameObject>("Prefabs/" + prefabName);
@@ -64,7 +62,7 @@ public class Block : MonoBehaviour
 
     private void Update()
     {
-        if( Time.time >= checkDestroyTimeStamp ) {
+        if( !blockTypes.Contains(GameManager.BlockType.goal) && Time.time >= checkDestroyTimeStamp ) {
             if( Vector3.Distance(transform.position, GameManager.Instance.player.transform.position) > destroyDistance ) {
                 Destroy(gameObject);
                 return;
@@ -72,6 +70,11 @@ public class Block : MonoBehaviour
 
             checkDestroyTimeStamp = Time.time + checkDestroyTime;
         }
+    }
+
+    public float GetSize()
+    {
+        return transform.localScale.x * transform.localScale.y;
     }
 
     private void OnCollisionEnter( Collision collision )
@@ -95,15 +98,21 @@ public class Block : MonoBehaviour
                 impactSource.Play();
             }
 
-            if( Vector3.Distance(GameManager.Instance.player.transform.position, collision.GetContact(0).point) < (collision.impulse.magnitude * collisionKillRangeModifier) ) {
-                GameManager.Instance.player.Die();
-            }
+            float killDistance = (collision.impulse.magnitude * collisionKillRangeModifier);
 
-            if( blockTypes.Contains(GameManager.BlockType.fragile) && collision.impulse.magnitude > fragileDestructionThreshold ) {
+            
+
+            if( !blockTypes.Contains(GameManager.BlockType.goal) && collision.impulse.magnitude > destructionThreshold && GetSize() <= block.GetSize() ) {
                 Destroy(gameObject);
 
                 stoneEmitter = Instantiate<GameObject>(stoneParticles, transform.position, Quaternion.identity, GameManager.Instance.emitterContainer).GetComponent<ParticleEmitter>();
-                stoneEmitter.Expand(transform.localScale.magnitude * 0.3f);
+                stoneEmitter.Expand(transform.localScale.magnitude * 0.2f);
+
+                killDistance += (transform.localScale.x * transform.localScale.y) * 0.03f;
+            }
+
+            if( Vector3.Distance(GameManager.Instance.player.transform.position, collision.GetContact(0).point) < killDistance ) {
+                GameManager.Instance.player.Die();
             }
         }
     }

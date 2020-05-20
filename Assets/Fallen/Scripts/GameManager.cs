@@ -17,7 +17,6 @@ public class GameManager : MonoBehaviour
     public PlayerJump player;
     public Text scoreText;
 
-    int score = 0;
 
     [Header("Block Spawning")]
     public float spawnMinScale = 2.5f;
@@ -49,7 +48,19 @@ public class GameManager : MonoBehaviour
     public int rainMaxCount = 12;
     public float spawnClusterRange = 30f;
 
-    GameObject blockPrefab;
+    [Header("Scoring")]
+    public int goalPoints = 100;
+    public float pointsPerSecond = 1;
+    public float pointsPerGoalSecond = 2;
+    public float goalExpectedTime = 120;
+    public float goalSpawnDistance = 600f;
+    [HideInInspector] public GameObject goal;
+    [HideInInspector] public int savedScore = 0;
+    [HideInInspector] public float timeOfLastScore = 0f;
+    int score = 0;
+    float startTime = 0f;
+
+    GameObject blockPrefab = null;
 
     [HideInInspector] public Transform blocksContainer;
     [HideInInspector] public Transform emitterContainer;
@@ -57,7 +68,8 @@ public class GameManager : MonoBehaviour
     public enum BlockType {
         rogue,
         hazard,
-        fragile
+        fragile,
+        goal
     }
 
     private void Awake()
@@ -103,9 +115,14 @@ public class GameManager : MonoBehaviour
             spawnTimeStamp = Time.time + spawnTime;
         }
 
-        if( player.isAlive && player.transform.position.y > score ) {
-            score = Mathf.FloorToInt(player.transform.position.y);
-            scoreText.text = score.ToString();
+        if( goal == null ) {
+            SpawnGoal();
+        }
+
+        if( player.isAlive ) {
+            scoreText.text = GetTotalScore().ToString();
+        } else {
+            scoreText.text = savedScore.ToString();
         }
 
         if( Input.GetKeyDown(KeyCode.R) ) {
@@ -117,6 +134,39 @@ public class GameManager : MonoBehaviour
         }
     }
     
+    public void AddScore( int amount )
+    {
+        score += amount;
+    }
+    public int GetTotalScore()
+    {
+        return score + Mathf.FloorToInt((Time.time - startTime) * pointsPerSecond);
+    }
+    public void ScoreGoal()
+    {
+        float timeToScore = (Time.time - timeOfLastScore);
+        float remainingTime = Mathf.Max(0, goalExpectedTime - timeToScore);
+        AddScore(goalPoints + Mathf.FloorToInt(remainingTime * pointsPerGoalSecond));
+        goal = null;
+
+        Debug.Log("Time to score: " + timeToScore);
+    }
+
+    private void SpawnGoal()
+    {
+        Vector3 goalDirection = Vector3.zero;
+        while( goalDirection.x == 0 || goalDirection.y == 0 ) {
+            goalDirection = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), 0).normalized;
+        }
+        Vector3 spawnScale = new Vector3(Random.Range(spawnMinScale, spawnScaleRange), Random.Range(spawnMinScale, spawnScaleRange), 1);
+        float spin = Random.Range(-spawnSpinRange, spawnSpinRange);
+
+        goal = SpawnBlock(player.transform.position + (goalDirection * goalSpawnDistance), 
+            spawnScale, Vector3.zero, spin, new List<BlockType>( new BlockType[] { BlockType.goal } ));
+
+        timeOfLastScore = Time.time;
+    }
+
     private void HandleBlockSpawning()
     {
         if( player.rigidbody.velocity.magnitude <= 0 ) { return; }
@@ -127,7 +177,7 @@ public class GameManager : MonoBehaviour
         if( rainCount > 0 ) {
             int failCount = 0;
             do {
-                if( !SpawnRandomBlock( spawnCenter, spawnOffset, rainScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(new BlockType[] { BlockType.hazard }), new List<BlockType>(new BlockType[] { BlockType.rogue, BlockType.fragile }) ) ) {
+                if( !SpawnRandomBlock( spawnCenter, spawnOffset, rainScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(), new List<BlockType>(new BlockType[] { BlockType.rogue }) ) ) {
                     failCount++;
                 } else {
                     break;
@@ -144,7 +194,7 @@ public class GameManager : MonoBehaviour
         if( roll <= clusterChance ) {
             int failCount = 0;
             do {
-                if( !SpawnRandomBlock( spawnCenter, spawnClusterRange, spawnScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(new BlockType[] { BlockType.hazard, BlockType.fragile }), new List<BlockType>() ) ) {
+                if( !SpawnRandomBlock( spawnCenter, spawnClusterRange, spawnScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(), new List<BlockType>() ) ) {
                     failCount++;
                 } else {
                     failCount = 0;
@@ -162,13 +212,13 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        SpawnRandomBlock( spawnCenter, spawnOffset, spawnScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(new BlockType[] { BlockType.rogue, BlockType.hazard, BlockType.fragile }), new List<BlockType>() );
+        SpawnRandomBlock( spawnCenter, spawnOffset, spawnScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(new BlockType[] { BlockType.rogue }), new List<BlockType>() );
     }
-    private bool SpawnRandomBlock(Vector3 spawnCenter, float spawnRange, float scaleRange, float cushion, float velocityRange, float spinRange, List<BlockType> possibleblockTypes, List<BlockType> forceBlockTypes, bool checkDistance = true)
+    private GameObject SpawnRandomBlock(Vector3 spawnCenter, float spawnRange, float scaleRange, float cushion, float velocityRange, float spinRange, List<BlockType> possibleblockTypes, List<BlockType> forceBlockTypes, bool checkDistance = true)
     {
         Vector3 spawnPosition = new Vector3(spawnCenter.x + Random.Range(-spawnRange, spawnRange), spawnCenter.y + Random.Range(-spawnRange, spawnRange), 0);
 
-        if( checkDistance && Vector3.Distance(spawnPosition, player.transform.position) < spawnDistance ) { return false; }
+        if( checkDistance && Vector3.Distance(spawnPosition, player.transform.position) < spawnDistance ) { return null; }
 
         float speedMagnitude = Random.value * spawnVelocityRange;
         float velocityAngle = Random.value * Mathf.PI*2;
@@ -184,22 +234,6 @@ public class GameManager : MonoBehaviour
                 velocity = attackVector * speedMagnitude;
             }
         }
-        
-        // Hazard
-        if( possibleblockTypes.Contains(BlockType.hazard) || forceBlockTypes.Contains(BlockType.hazard) ) {
-            float roll = Random.value;
-            if( roll <= hazardChance || forceBlockTypes.Contains(BlockType.hazard) ) {
-                blockTypes.Add(BlockType.hazard);
-            }
-        }
-
-        // Fragile
-        if( possibleblockTypes.Contains(BlockType.fragile) || forceBlockTypes.Contains(BlockType.fragile) ) {
-            float roll = Random.value;
-            if( roll <= fragileChance || forceBlockTypes.Contains(BlockType.fragile) ) {
-                blockTypes.Add(BlockType.fragile);
-            }
-        }
 
         float spin = Random.Range(-spinRange, spinRange);
 
@@ -209,9 +243,9 @@ public class GameManager : MonoBehaviour
             return SpawnBlock(spawnPosition, spawnScale, velocity, spin, blockTypes);
         }
         
-        return false;
+        return null;
     }
-    private bool SpawnBlock(Vector3 spawnPosition, Vector3 spawnScale, Vector3 velocity, float spin, List<BlockType> blockTypes)
+    private GameObject SpawnBlock(Vector3 spawnPosition, Vector3 spawnScale, Vector3 velocity, float spin, List<BlockType> blockTypes)
     {
         Block block = Instantiate<GameObject>( blockPrefab, spawnPosition, Quaternion.AngleAxis(Random.Range(0, 360), transform.forward), blocksContainer ).GetComponent<Block>();
         block.SetScale(spawnScale);
@@ -220,7 +254,7 @@ public class GameManager : MonoBehaviour
         block.rigidbody.velocity = velocity;
         block.rigidbody.angularVelocity = new Vector3(0f, 0f, spin);
 
-        return true;
+        return block.gameObject;
     }
 
     public void ResetGame()
@@ -228,7 +262,10 @@ public class GameManager : MonoBehaviour
         Destroy(blocksContainer.gameObject);
         Destroy(emitterContainer.gameObject);
         score = 0;
+        startTime = Time.time;
         scoreText.text = "0";
+
+        Destroy(goal);
 
         player.ResetPlayer();
 
