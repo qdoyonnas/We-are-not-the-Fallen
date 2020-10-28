@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody), typeof(AudioSource))]
 public class Block : MonoBehaviour
 {
     public float massFactor = 1f;
@@ -99,8 +100,6 @@ public class Block : MonoBehaviour
             }
 
             float killDistance = (collision.impulse.magnitude * collisionKillRangeModifier);
-
-            
 
             if( !blockTypes.Contains(GameManager.BlockType.goal) && collision.impulse.magnitude > destructionThreshold && GetSize() <= block.GetSize() ) {
                 Destroy(gameObject);

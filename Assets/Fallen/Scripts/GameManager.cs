@@ -15,6 +15,7 @@ public class GameManager : MonoBehaviour
 
     public CameraBase activeCamera;
     public PlayerJump player;
+    public Pointer pointer;
     public Text scoreText;
 
 
@@ -46,6 +47,7 @@ public class GameManager : MonoBehaviour
     public float rainScaleRange = 2f;
     public int rainMinCount = 3;
     public int rainMaxCount = 12;
+    public float shotVelocity = 70f;
     public float spawnClusterRange = 30f;
 
     [Header("Scoring")]
@@ -61,6 +63,7 @@ public class GameManager : MonoBehaviour
     float startTime = 0f;
 
     GameObject blockPrefab = null;
+    GameObject shotPrefab = null;
 
     [HideInInspector] public Transform blocksContainer;
     [HideInInspector] public Transform emitterContainer;
@@ -79,9 +82,13 @@ public class GameManager : MonoBehaviour
         _instance = this;
 
         blockPrefab = Resources.Load<GameObject>("Prefabs/Block");
+        shotPrefab = Resources.Load<GameObject>("Prefabs/Shot");
     }
     private void Start()
     {
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Confined;
+
         SetupGame();
     }
     private void SetupGame()
@@ -111,7 +118,11 @@ public class GameManager : MonoBehaviour
     private void Update()
     {
         if( Time.time > spawnTimeStamp || rainCount > 0 ) {
-            HandleBlockSpawning();
+            if( rainCount > 0 ) {
+                SpawnShot();
+            } else {
+                HandleBlockSpawning();
+            }
             spawnTimeStamp = Time.time + spawnTime;
         }
 
@@ -172,22 +183,6 @@ public class GameManager : MonoBehaviour
         if( player.rigidbody.velocity.magnitude <= 0 ) { return; }
 
         Vector3 spawnCenter = player.transform.position + (player.rigidbody.velocity.normalized * spawnDistance);
-
-        // Continued Rain
-        if( rainCount > 0 ) {
-            int failCount = 0;
-            do {
-                if( !SpawnRandomBlock( spawnCenter, spawnOffset, rainScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(), new List<BlockType>(new BlockType[] { BlockType.rogue }) ) ) {
-                    failCount++;
-                } else {
-                    break;
-                }
-            } while( failCount <= 4 );
-
-            rainCount--;
-
-            return;
-        }
 
         // Cluster
         float roll = Random.value;
@@ -255,6 +250,24 @@ public class GameManager : MonoBehaviour
         block.rigidbody.angularVelocity = new Vector3(0f, 0f, spin);
 
         return block.gameObject;
+    }
+
+    private GameObject SpawnShot()
+    {
+        Vector3 spawnCenter = player.transform.position + (-player.rigidbody.velocity.normalized * spawnDistance);
+        Vector3 spawnPosition = new Vector3(spawnCenter.x + Random.Range(-spawnOffset, spawnOffset), spawnCenter.y + Random.Range(-spawnOffset, spawnOffset), 0);
+
+        if( Vector3.Distance(spawnPosition, player.transform.position) < spawnDistance ) { return null; }
+
+        Vector3 target = new Vector3(player.transform.position.x + Random.Range(-spawnOffset * 0.7f, spawnOffset * 0.7f), player.transform.position.y + Random.Range(-spawnOffset * 0.7f, spawnOffset * 0.7f), 0);
+        Vector3 attackVector = (target - spawnPosition).normalized;
+        Vector3 velocity = attackVector * shotVelocity;
+
+        Shot shot = Instantiate<GameObject>( shotPrefab, spawnPosition, Quaternion.identity ).GetComponent<Shot>();
+        shot.rigidbody.velocity = velocity;
+
+        rainCount--;
+        return shot.gameObject;
     }
 
     public void ResetGame()

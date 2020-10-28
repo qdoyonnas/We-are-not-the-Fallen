@@ -28,7 +28,8 @@ public class GoalPointer : MonoBehaviour
                 Vector3 goalDirection = (GameManager.Instance.goal.transform.position - player.transform.position).normalized;
 
                 float distance = GameManager.Instance.activeCamera.camera.orthographicSize * 0.8f;
-                transform.position = player.transform.position + (goalDirection * distance);
+                Vector3 center = player.transform.position + (Vector3.back);
+                transform.position = center + (goalDirection * distance);
             }
         }
     }

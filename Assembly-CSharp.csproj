@@ -65,11 +65,17 @@
   <ItemGroup>
     <Compile Include="Assets\Fallen\Scripts\Block.cs" />
     <Compile Include="Assets\Fallen\Scripts\CameraBase.cs" />
+    <Compile Include="Assets\Fallen\Scripts\DontGoThroughThings.cs" />
+    <Compile Include="Assets\Fallen\Scripts\EnemyBase.cs" />
     <Compile Include="Assets\Fallen\Scripts\GameManager.cs" />
     <Compile Include="Assets\Fallen\Scripts\GoalPointer.cs" />
     <Compile Include="Assets\Fallen\Scripts\ParticleEmitter.cs" />
     <Compile Include="Assets\Fallen\Scripts\PlayerJump.cs" />
+    <Compile Include="Assets\Fallen\Scripts\Pointer.cs" />
+    <Compile Include="Assets\Fallen\Scripts\Shoot.cs" />
+    <Compile Include="Assets\Fallen\Scripts\Shot.cs" />
     <Compile Include="Assets\Fallen\Scripts\SkyScroll.cs" />
+    <None Include="Assets\Fallen\Shaders\UnlitTransparentColored.shader" />
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>C:/Users/ivor9/repos/We-are-not-the-Fallen/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
     </Reference>

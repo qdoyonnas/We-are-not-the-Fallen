@@ -9,11 +9,15 @@ public class PlayerJump : MonoBehaviour
     [Header("Controls")]
     public float airMove = 10f;
     public float maxAirMove = 50f;
+    public float airMoveVerticalVelocityThreshold = 60f;
 
     [Header("Physics")]
     public float jumpFactor = 1f;
     public float dashFactor = 0.5f;
     public float dashMassFactor = 2f;
+    public float forceMultiplier = 1000f;
+
+    public float minDashSpeed = 100f;
     public float collisionDuration = 0.1f;
     float collisionTimeStamp = -1f;
 
@@ -22,8 +26,6 @@ public class PlayerJump : MonoBehaviour
     public float groundedFriction = 1f;
 
     [Header("Timing")]
-    public float dashDuration = 1f;
-    float dashTimeStamp = -1f;
 
     [Header("Sounds")]
     public AudioSource effectSource;
@@ -42,10 +44,11 @@ public class PlayerJump : MonoBehaviour
     [HideInInspector] new public Rigidbody rigidbody;
     new CapsuleCollider collider;
     float defaultMass;
+    Renderer glowSphere;
 
     // Grounding
-    bool grounded = false;
-    bool canDash = false;
+    public bool grounded = false;
+    public bool canDash = false;
     GameObject anchor;
 
     private void Awake()
@@ -66,16 +69,11 @@ public class PlayerJump : MonoBehaviour
 
         impactParticles = Resources.Load<GameObject>("Particles/Impact");
         stoneParticles = Resources.Load<GameObject>("Particles/StoneImpact");
+        glowSphere = transform.Find("Glow").GetComponent<Renderer>();
     }
 
     private void FixedUpdate()
     {
-        if( dashTimeStamp != -1 ) {
-            if( Time.time >= dashTimeStamp ) {
-                rigidbody.mass = defaultMass;
-                dashTimeStamp = -1f;
-            }
-        }
         if( collisionTimeStamp != -1 ) {
             if( Time.time >= collisionTimeStamp ) {
                 collider.enabled = true;
@@ -105,47 +103,124 @@ public class PlayerJump : MonoBehaviour
 
         if( Input.GetMouseButtonDown(0) ) {
             if( grounded ) {
-                rigidbody.useGravity = true;
-                rigidbody.drag = airFriction;
-                grounded = false;
-                Destroy(anchor);
-
-                Vector3 mousePos = GameManager.Instance.activeCamera.camera.ScreenToWorldPoint(Input.mousePosition);
-                mousePos.z = 0;
-                Vector3 jumpVector = -(transform.position - mousePos).normalized;
-
-                rigidbody.velocity = Vector3.zero;
-                rigidbody.AddForce(jumpFactor * jumpVector);
-
-            } else if( canDash ) {
-                canDash = false;
-
-                Vector3 mousePos = GameManager.Instance.activeCamera.camera.ScreenToWorldPoint(Input.mousePosition);
-                mousePos.z = 0;
-                Vector3 jumpVector = -(transform.position - mousePos).normalized;
-                rigidbody.AddForce(jumpVector * dashFactor);
-                
-                rigidbody.mass *= dashMassFactor;
-
-                dashTimeStamp = Time.time + dashDuration;
+                Jump();
+            } else {
+                ChangeMass(defaultMass * dashMassFactor);
+                if( canDash ) {
+                    Dash();
+                }
             }
+        }
+        if( Input.GetMouseButtonUp(0) ) {
+            ChangeMass();
         }
 
         if( !grounded ) {
-            if( Input.GetKey(KeyCode.A) ) {
-                if( rigidbody.velocity.x > -maxAirMove ) {
-                    rigidbody.AddForce(Vector3.left * airMove);
-                }
+            AirMove();
+        }
+    }
+
+	#region Movement Methods
+
+    private void Jump()
+    {
+        Vector3 mousePos = GameManager.Instance.activeCamera.camera.ScreenToWorldPoint(Input.mousePosition);
+        Vector3 jumpVector = (mousePos - transform.position).normalized;
+        // Return if something is too close to jump
+        Vector3 flattenedJumpVector = new Vector3(jumpVector.x, jumpVector.y, 0);
+        RaycastHit[] hits = Physics.SphereCastAll(transform.position, 0.2f, flattenedJumpVector, 2f, LayerMask.GetMask("Default"), QueryTriggerInteraction.Ignore);
+        if( hits.Length > 0 ) {
+            return;
+        }
+
+        ChangeMass(defaultMass * dashMassFactor);
+
+        rigidbody.useGravity = true;
+        rigidbody.drag = airFriction;
+        grounded = false;
+        Destroy(anchor);
+
+        mousePos.z = 0;
+
+        rigidbody.velocity = Vector3.zero;
+        rigidbody.AddForce(jumpFactor * forceMultiplier * jumpVector);
+    }
+
+	private void Dash()
+    {
+        canDash = false;
+                
+        Vector3 mousePos = GameManager.Instance.activeCamera.camera.ScreenToWorldPoint(Input.mousePosition);
+        mousePos.z = 0;
+        Vector3 jumpVector = -(transform.position - mousePos).normalized;
+
+        Vector3 newVelocity = rigidbody.velocity;
+        if (Mathf.Sign(newVelocity.x) != Mathf.Sign(jumpVector.x))
+        {
+            newVelocity.x = 0;
+        }
+        if (Mathf.Sign(newVelocity.y) != Mathf.Sign(jumpVector.y))
+        {
+            newVelocity.y = 0;
+        }
+        rigidbody.velocity = newVelocity;
+        rigidbody.velocity = Vector3.zero;
+
+        rigidbody.AddForce(jumpVector * dashFactor * forceMultiplier);
+    }
+
+    private void AirMove()
+    {
+        float adjustedMaxAirMove = maxAirMove;
+        float adjustedAirMove = airMove;
+
+        float absYVel = Mathf.Abs(rigidbody.velocity.y);
+        if( absYVel < airMoveVerticalVelocityThreshold ) {
+            float ratio = absYVel / airMoveVerticalVelocityThreshold;
+            adjustedMaxAirMove = maxAirMove * ratio;
+            adjustedAirMove = airMove * ratio;
+        }
+        if( Input.GetKey(KeyCode.A) ) {
+            if( rigidbody.velocity.x > -adjustedMaxAirMove ) {
+                rigidbody.AddForce(Vector3.left * adjustedAirMove);
             }
-            if( Input.GetKey(KeyCode.D) ) {
-                if( rigidbody.velocity.x < maxAirMove ) {
-                    rigidbody.AddForce(Vector3.right * airMove);
-                }
+        }
+        if( Input.GetKey(KeyCode.D) ) {
+            if( rigidbody.velocity.x < adjustedMaxAirMove ) {
+                rigidbody.AddForce(Vector3.right * adjustedAirMove);
+            }
+        }
+        if( Input.GetKey(KeyCode.S) ) {
+            if( rigidbody.velocity.y > -maxAirMove ) {
+                rigidbody.AddForce(Vector3.down * airMove);
             }
         }
     }
 
-    private void OnCollisionEnter( Collision collision )
+	#endregion
+
+	#region Utilities
+
+    public void ChangeMass( float mass = -1f )
+    {
+        if( mass == -1 ) {
+            rigidbody.mass = defaultMass;
+            glowSphere.enabled = false;
+        } else {
+            rigidbody.mass = mass;
+            glowSphere.enabled = true;
+        }
+    }
+
+    public bool IsOnObject(GameObject gameObject)
+    {
+        if( anchor == null || anchor.transform.parent == null ) { return false; }
+        return gameObject.transform == anchor.transform.parent;
+    }
+
+	#endregion
+
+	private void OnCollisionEnter( Collision collision )
     {
         if( !isAlive ) { return; }
 
@@ -176,9 +251,7 @@ public class PlayerJump : MonoBehaviour
                 anchor.transform.rotation = Quaternion.LookRotation(transform.forward, contact.normal);
                 anchor.transform.parent = collision.gameObject.transform;
 
-                rigidbody.mass = defaultMass;
-
-                float shakeFactor = dashTimeStamp != -1f ? 0.03f : 0.01f;
+                float shakeFactor = 0.02f;
                 GameManager.Instance.activeCamera.CameraShake(0.2f, storedVelocity * shakeFactor);
                 if( effectSource != null ) {
                     effectSource.pitch = Random.Range(0.6f, 2f);
@@ -189,12 +262,12 @@ public class PlayerJump : MonoBehaviour
 
                 ParticleEmitter impactEmitter = Instantiate<GameObject>(impactParticles, transform.position, transform.rotation, GameManager.Instance.emitterContainer).GetComponent<ParticleEmitter>();
                 impactEmitter.Expand( (storedVelocity / impactSpeedValue) * 0.5f );
-                if( dashTimeStamp != -1f ) {
+                if( rigidbody.mass != defaultMass ) {
                     ParticleEmitter stoneEmitter = Instantiate<GameObject>(stoneParticles, transform.position, transform.rotation).GetComponent<ParticleEmitter>();
                     stoneEmitter.Expand( (storedVelocity / impactSpeedValue) * 0.5f );
                 }
-
-                dashTimeStamp = -1f;
+                
+                ChangeMass();
                 storedVelocity = 0f;
 
             } else if( collision.transform != anchor.transform.parent ) {
@@ -203,16 +276,12 @@ public class PlayerJump : MonoBehaviour
         }
     }
 
-    public bool IsOnObject(GameObject gameObject)
-    {
-        if( anchor == null || anchor.transform.parent == null ) { return false; }
-        return gameObject.transform == anchor.transform.parent;
-    }
 
     public void Die()
     {
         isAlive = false;
         GetComponent<MeshRenderer>().enabled = false;
+        glowSphere.enabled = false;
 
         rigidbody.velocity = Vector3.zero;
         rigidbody.useGravity = false;
