@@ -19,6 +19,8 @@ public class Shot : MonoBehaviour
 
     AudioSource impactSource;
 
+    bool isDestroyed = false;
+
     // Start is called before the first frame update
     private void Awake()
     {
@@ -33,7 +35,10 @@ public class Shot : MonoBehaviour
 
     private void Update()
     {
-        if( Time.time >= lifeTimestamp ) {
+        if( isDestroyed && !impactSource.isPlaying ) {
+            Destroy(gameObject);
+            return;
+        } else if( Time.time >= lifeTimestamp ) {
             Destroy(gameObject);
             return;
         }
@@ -52,8 +57,8 @@ public class Shot : MonoBehaviour
         stoneEmitter.Expand(intensity);
 
         if( impactSource != null ) {
-            impactSource.pitch = Random.Range(0.6f, 2f);
-            impactSource.volume = intensity * 0.3f;
+            impactSource.pitch = Random.Range(0.2f, 2f);
+            impactSource.volume = 1;
             impactSource.Stop();
             impactSource.Play();
         }
@@ -62,6 +67,16 @@ public class Shot : MonoBehaviour
             GameManager.Instance.player.Die();
         }
 
-        Destroy(gameObject);
+        SetToDestroy();
+    }
+
+    void SetToDestroy()
+    {
+        rigidbody.isKinematic = true;
+        GetComponent<SphereCollider>().enabled = false;
+        GetComponent<MeshRenderer>().enabled = false;
+        GetComponent<TrailRenderer>().enabled = false;
+
+        isDestroyed = true;
     }
 }
