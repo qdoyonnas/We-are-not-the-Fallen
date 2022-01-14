@@ -19,17 +19,20 @@ public class GoalPointer : MonoBehaviour
     void FixedUpdate()
     {
         renderer.enabled = false;
+        float distance = GameManager.Instance.activeCamera.camera.orthographicSize * 0.8f;
 
         if( GameManager.Instance.goal != null ) {
-            MeshRenderer goalRenderer = GameManager.Instance.goal.GetComponentInChildren<MeshRenderer>();
-            if( !goalRenderer.isVisible ) {
-                renderer.enabled = true;
+            float goalDistance = Vector3.Distance(GameManager.Instance.player.transform.position, GameManager.Instance.goal.transform.position);
+            if( goalDistance > distance ) {
+                MeshRenderer goalRenderer = GameManager.Instance.goal.GetComponentInChildren<MeshRenderer>();
+                if( !goalRenderer.isVisible ) {
+                    renderer.enabled = true;
 
-                Vector3 goalDirection = (GameManager.Instance.goal.transform.position - player.transform.position).normalized;
+                    Vector3 goalDirection = (GameManager.Instance.goal.transform.position - player.transform.position).normalized;
 
-                float distance = GameManager.Instance.activeCamera.camera.orthographicSize * 0.8f;
-                Vector3 center = player.transform.position + (Vector3.back);
-                transform.position = center + (goalDirection * distance);
+                    Vector3 center = player.transform.position + (Vector3.back);
+                    transform.position = center + (goalDirection * distance);
+                }
             }
         }
     }

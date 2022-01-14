@@ -20,6 +20,7 @@ public class GameManager : MonoBehaviour
 
 
     [Header("Block Spawning")]
+    public bool blockSpawning = true;
     public float spawnMinScale = 2.5f;
     public float spawnScaleRange = 10f;
     public float spawnOffset = 5f;
@@ -28,6 +29,7 @@ public class GameManager : MonoBehaviour
     public float spawnSpinRange = 15f;
     public float spawnTime = 0.1f;
     public float spawnCushion = 5f;
+    public float spawnBlockChance = 0.9f;
 
     float spawnTimeStamp = -1f;
 
@@ -48,17 +50,18 @@ public class GameManager : MonoBehaviour
     public int rainMinCount = 3;
     public int rainMaxCount = 12;
     public float shotVelocity = 70f;
-    public float spawnClusterRange = 30f;
+    public float spawnClusterRange = 5f;
+    public float minClusterAmount = 10f;
+    public float maxClusterAmount = 30f;
+    public float spawnClusterVelocityRange = 1f;
+    public float spawnClusterSpinRange = 1f;
+    public float spawnClusterCushion = 2f;
 
     [Header("Scoring")]
-    public int goalPoints = 100;
-    public float pointsPerSecond = 1;
-    public float pointsPerGoalSecond = 2;
-    public float goalExpectedTime = 120;
+    public float heightMult = 0.25f;
     public float goalSpawnDistance = 600f;
     [HideInInspector] public GameObject goal;
     [HideInInspector] public int savedScore = 0;
-    [HideInInspector] public float timeOfLastScore = 0f;
     int score = 0;
     float startTime = 0f;
 
@@ -121,19 +124,27 @@ public class GameManager : MonoBehaviour
             if( rainCount > 0 ) {
                 SpawnShot();
             } else {
-                HandleBlockSpawning();
+                if( blockSpawning ) {
+                    HandleBlockSpawning();
+                }
             }
             spawnTimeStamp = Time.time + spawnTime;
         }
 
-        if( goal == null ) {
-            SpawnGoal();
-        }
-
         if( player.isAlive ) {
-            scoreText.text = GetTotalScore().ToString();
+            scoreText.text = UpdateScore().ToString();
         } else {
             scoreText.text = savedScore.ToString();
+        }
+
+        if( goal == null && !player.superJump  ) {
+            SpawnGoal();
+        } else {
+            if( goal != null && Vector3.Distance(goal.transform.position, player.transform.position) > goalSpawnDistance * 1.5f ) {
+                Destroy(goal.gameObject);
+                goal = null;
+                SpawnGoal();
+            }
         }
 
         if( Input.GetKeyDown(KeyCode.R) ) {
@@ -144,38 +155,28 @@ public class GameManager : MonoBehaviour
             Application.Quit();
         }
     }
-    
-    public void AddScore( int amount )
-    {
-        score += amount;
-    }
-    public int GetTotalScore()
-    {
-        return score + Mathf.FloorToInt((Time.time - startTime) * pointsPerSecond);
-    }
-    public void ScoreGoal()
-    {
-        float timeToScore = (Time.time - timeOfLastScore);
-        float remainingTime = Mathf.Max(0, goalExpectedTime - timeToScore);
-        AddScore(goalPoints + Mathf.FloorToInt(remainingTime * pointsPerGoalSecond));
-        goal = null;
 
-        Debug.Log("Time to score: " + timeToScore);
+    public int UpdateScore()
+    {
+        int playerHeightScore =  Mathf.FloorToInt(player.transform.position.y * heightMult);
+        score = playerHeightScore > score ? playerHeightScore : score;
+        savedScore = score;
+
+        return score;
     }
 
     private void SpawnGoal()
     {
         Vector3 goalDirection = Vector3.zero;
         while( goalDirection.x == 0 || goalDirection.y == 0 ) {
-            goalDirection = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), 0).normalized;
+            float x = Mathf.Round(Random.Range(-1f, 1f));
+            goalDirection = new Vector3(x, Random.Range(-0.1f, 0.6f), 0).normalized;
         }
         Vector3 spawnScale = new Vector3(Random.Range(spawnMinScale, spawnScaleRange), Random.Range(spawnMinScale, spawnScaleRange), 1);
         float spin = Random.Range(-spawnSpinRange, spawnSpinRange);
 
         goal = SpawnBlock(player.transform.position + (goalDirection * goalSpawnDistance), 
             spawnScale, Vector3.zero, spin, new List<BlockType>( new BlockType[] { BlockType.goal } ));
-
-        timeOfLastScore = Time.time;
     }
 
     private void HandleBlockSpawning()
@@ -187,27 +188,28 @@ public class GameManager : MonoBehaviour
         // Cluster
         float roll = Random.value;
         if( roll <= clusterChance ) {
+            int amount = Mathf.RoundToInt(Random.Range(minClusterAmount, maxClusterAmount));
             int failCount = 0;
             do {
-                if( !SpawnRandomBlock( spawnCenter, spawnClusterRange, spawnScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(), new List<BlockType>() ) ) {
+                if( !SpawnRandomBlock( spawnCenter, spawnClusterRange * amount, spawnScaleRange, spawnClusterCushion, spawnClusterVelocityRange, spawnClusterSpinRange, new List<BlockType>(new BlockType[] { BlockType.hazard }), new List<BlockType>() ) ) {
                     failCount++;
                 } else {
                     failCount = 0;
                 }
-            } while( failCount <= 10 );
-
-            return;
+            } while( failCount <= amount );
         }
 
         // Rain
         roll = Random.value;
         if( roll <= rainChance ) {
             rainCount = Random.Range(rainMinCount, rainMaxCount);
-            
-            return;
         }
 
-        SpawnRandomBlock( spawnCenter, spawnOffset, spawnScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(new BlockType[] { BlockType.rogue }), new List<BlockType>() );
+        // Regular block
+        roll = Random.value;
+        if( roll <= spawnBlockChance ) {
+            SpawnRandomBlock( spawnCenter, spawnOffset, spawnScaleRange, spawnCushion, spawnVelocityRange, spawnSpinRange, new List<BlockType>(new BlockType[] { BlockType.rogue, BlockType.hazard }), new List<BlockType>() );
+        }
     }
     private GameObject SpawnRandomBlock(Vector3 spawnCenter, float spawnRange, float scaleRange, float cushion, float velocityRange, float spinRange, List<BlockType> possibleblockTypes, List<BlockType> forceBlockTypes, bool checkDistance = true)
     {
@@ -224,9 +226,18 @@ public class GameManager : MonoBehaviour
         if( possibleblockTypes.Contains(BlockType.rogue) || forceBlockTypes.Contains(BlockType.rogue) ) {
             float roll = Random.value;
             if( roll <= rogueChance || forceBlockTypes.Contains(BlockType.rogue) ) {
+                blockTypes.Add(BlockType.rogue);
                 speedMagnitude = Random.Range(spawnVelocityRange * rogueMinVelocityMult, spawnVelocityRange * rogueMaxVelocityMult);
                 Vector3 attackVector = (player.transform.position - spawnPosition).normalized;
                 velocity = attackVector * speedMagnitude;
+            }
+        }
+
+        // Hazard
+        if( possibleblockTypes.Contains(BlockType.hazard) || forceBlockTypes.Contains(BlockType.hazard) ) {
+            float roll = Random.value;
+            if( roll <= hazardChance || forceBlockTypes.Contains(BlockType.hazard) ) {
+                blockTypes.Add(BlockType.hazard);
             }
         }
 

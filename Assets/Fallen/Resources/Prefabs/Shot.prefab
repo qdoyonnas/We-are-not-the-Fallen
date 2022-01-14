@@ -225,6 +225,8 @@ MonoBehaviour:
     type: 3}
   stoneParticles: {fileID: 1195915722925264058, guid: 817f4da51ba3ebb4f9f3341f1cc4fec0,
     type: 3}
+  flareParticles: {fileID: 2858152505986081142, guid: ebb0446de0192074ca67bfbba3f9bf81,
+    type: 3}
 --- !u!54 &5668664426198879159
 Rigidbody:
   m_ObjectHideFlags: 0

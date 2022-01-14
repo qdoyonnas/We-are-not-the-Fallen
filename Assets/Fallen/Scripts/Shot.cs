@@ -16,6 +16,7 @@ public class Shot : MonoBehaviour
     public float shakeDistanceValue = 50f;
     public GameObject impactParticles;
     public GameObject stoneParticles;
+    public GameObject flareParticles;
 
     AudioSource impactSource;
 
@@ -55,6 +56,8 @@ public class Shot : MonoBehaviour
         impactEmitter.Expand(intensity);
         ParticleEmitter stoneEmitter = Instantiate<GameObject>(stoneParticles, transform.position, Quaternion.identity, GameManager.Instance.emitterContainer).GetComponent<ParticleEmitter>();
         stoneEmitter.Expand(intensity);
+        ParticleEmitter flareEmitter = Instantiate<GameObject>(flareParticles, collision.GetContact(0).point + flareParticles.transform.position, Quaternion.identity, GameManager.Instance.emitterContainer).GetComponent<ParticleEmitter>();
+        flareEmitter.Expand(intensity);
 
         if( impactSource != null ) {
             impactSource.pitch = Random.Range(0.2f, 2f);

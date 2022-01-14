@@ -6,6 +6,7 @@ public class CameraBase : MonoBehaviour
 {
     public Transform target;
     public float distance;
+    public float cameraPanDistance = 10f;
 
     private float cameraShakeDuration = -1f;
     private float cameraShakeTimeStamp = -1f;
@@ -30,18 +31,23 @@ public class CameraBase : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
-        transform.position = target.position + (-transform.forward * distance);
+        Vector3 mousePosition = Input.mousePosition;
+        float screenWidth = GameManager.Instance.activeCamera.camera.scaledPixelWidth / 2;
+        float screenHeight = GameManager.Instance.activeCamera.camera.scaledPixelHeight / 2;
+        Vector3 centeredMousePosition = new Vector3(mousePosition.x - screenWidth, mousePosition.y - screenHeight, 0);
+        Vector3 screenRatio = new Vector3(centeredMousePosition.x / screenWidth, centeredMousePosition.y / screenHeight, 0);
+        transform.position = target.position + new Vector3(screenRatio.x * cameraPanDistance, screenRatio.y * cameraPanDistance, 0);
     }
     private void Update()
     {
         if( cameraShakeTimeStamp != -1 ) {
             if( Time.time >= cameraShakeTimeStamp ) {
-                camera.transform.localPosition = Vector3.zero;
+                camera.transform.localPosition = new Vector3(0, 0, -distance);
                 cameraShakeTimeStamp = -1f;
             } else {
                 float currentShakeIntensity = shakeIntensity * ( (cameraShakeTimeStamp - Time.time)/cameraShakeDuration );
                 camera.transform.localPosition = new Vector3(Random.Range(-currentShakeIntensity, currentShakeIntensity),
-                                                        Random.Range(-currentShakeIntensity, currentShakeIntensity), 0);
+                                                        Random.Range(-currentShakeIntensity, currentShakeIntensity), -distance);
             }
         }
     }
