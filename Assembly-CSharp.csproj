@@ -75,7 +75,10 @@
     <Compile Include="Assets\Fallen\Scripts\Shoot.cs" />
     <Compile Include="Assets\Fallen\Scripts\Shot.cs" />
     <Compile Include="Assets\Fallen\Scripts\SkyScroll.cs" />
-    <Compile Include="Assets\Fallen\Scripts\SpawnSettingsScriptable.cs" />
+    <Compile Include="Assets\Fallen\Scripts\SpawnOptions\ClusterSpawn.cs" />
+    <Compile Include="Assets\Fallen\Scripts\SpawnOptions\RogueSpawn.cs" />
+    <Compile Include="Assets\Fallen\Scripts\SpawnOptions\SpawnOption.cs" />
+    <Compile Include="Assets\Fallen\Scripts\SpawnOptions\StandardBlock.cs" />
     <None Include="Assets\Fallen\Shaders\UnlitTransparentColored.shader" />
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>C:/Users/ivor9/repos/We-are-not-the-Fallen/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>

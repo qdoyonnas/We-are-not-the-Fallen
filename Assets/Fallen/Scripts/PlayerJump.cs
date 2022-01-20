@@ -6,6 +6,10 @@ public class PlayerJump : MonoBehaviour
 {
     public bool isAlive = true;
 
+    [Header("Controls")]
+    public bool canDash = true;
+    public bool canSuperJumpDash = true;
+
     [Header("Physics")]
     private bool _superJump = false;
     public bool superJump {
@@ -13,6 +17,9 @@ public class PlayerJump : MonoBehaviour
             return _superJump;
         }
         set {
+            if( value ) {
+                superJumpLevel = GameManager.Instance.level;
+            }
             if( superJump && !value ) {
                 trail.material = trailColor;
                 if( GameManager.Instance.goal != null ) {
@@ -69,6 +76,7 @@ public class PlayerJump : MonoBehaviour
     GameObject body;
     TrailRenderer trail;
     new Light light;
+    int superJumpLevel = 0;
 
     // Grounding
     private bool _grounded = false;
@@ -89,8 +97,8 @@ public class PlayerJump : MonoBehaviour
             }
         }
     }
-    public bool canDash = false;
-    GameObject anchor;
+    [HideInInspector] public bool dashActive = false;
+    public GameObject anchor;
 
     private void Awake()
     {
@@ -147,17 +155,19 @@ public class PlayerJump : MonoBehaviour
     {
         if( !isAlive ) { return; }
 
-        if( !canDash ) {
+        if( !dashActive ) {
             if( Time.time >= dashTime ) {
-                canDash = true;
+                dashActive = true;
             }
         }
 
-        if( superJump && !grounded ) {
+        if( superJump && GameManager.Instance.level > superJumpLevel ) {
             if( Time.time >= superJumpTime ) {
                 superJump = false;
                 grounded = grounded;
             }
+        } else {
+            superJumpTime = Time.time + superJumpDuration;
         }
 
         if( Input.GetMouseButtonDown(0) ) {
@@ -165,7 +175,7 @@ public class PlayerJump : MonoBehaviour
                 Jump();
             } else {
                 ChangeMass(defaultMass * dashMassFactor);
-                if( canDash ) {
+                if( dashActive && (canDash || (canSuperJumpDash && superJump)) ) {
                     Dash();
                 }
             }
@@ -185,12 +195,9 @@ public class PlayerJump : MonoBehaviour
     {
         Vector3 mousePos = GameManager.Instance.activeCamera.camera.ScreenToWorldPoint(Input.mousePosition);
         Vector3 jumpVector = (mousePos - transform.position).normalized;
-        // Return if something is too close to jump
-        Vector3 flattenedJumpVector = new Vector3(jumpVector.x, jumpVector.y, 0);
-        RaycastHit[] hits = Physics.SphereCastAll(transform.position, 0.2f, flattenedJumpVector, 2f, LayerMask.GetMask("Default"), QueryTriggerInteraction.Ignore);
-        if( hits.Length > 0 ) {
-            return;
-        }
+        // Return if angle is too wide (jumping into block)
+        float angle = Vector3.Angle(transform.up, jumpVector);
+        if( angle >= 90 ) { return; }
 
         ChangeMass(defaultMass * dashMassFactor);
 
@@ -207,19 +214,11 @@ public class PlayerJump : MonoBehaviour
 
         rigidbody.velocity = Vector3.zero;
         rigidbody.AddForce((jumpFactor) * forceMultiplier * jumpVector);
-
-        //if( effectSource != null ) {
-        //    effectSource.clip = impactSound;
-        //    effectSource.pitch = Random.Range(0.6f, 2f);
-        //    effectSource.volume = 0.5f;
-        //    effectSource.Stop();
-        //    effectSource.Play();
-        //}
     }
 
 	private void Dash()
     {
-        canDash = false;
+        dashActive = false;
         dashTime = Time.time + dashCooldown;
                 
         Vector3 mousePos = GameManager.Instance.activeCamera.camera.ScreenToWorldPoint(Input.mousePosition);
@@ -300,20 +299,24 @@ public class PlayerJump : MonoBehaviour
                 }
 
             } else if( collision.transform != anchor.transform.parent ) {
-                Die();
+                if( superJump ) {
+                    block.DestroyBlock();
+                } else {
+                    Die();
+                }
             }
 
             if( block.blockTypes.Contains(GameManager.BlockType.goal) ) {
                 block.SetTypes(new List<GameManager.BlockType>());
                 superJump = true;
-                superJumpTime = Time.time + superJumpDuration;
+                GameManager.Instance.goal = null;
             }
         }
     }
     private void LandOnBlock( Collision collision )
     {
         grounded = true;
-        canDash = true;
+        dashActive = true;
             
         ContactPoint contact = collision.GetContact(0);
         transform.rotation = Quaternion.LookRotation(transform.forward, contact.normal);
@@ -348,12 +351,13 @@ public class PlayerJump : MonoBehaviour
 
     public void Die()
     {
+        if( superJump ) { return; }
+
         isAlive = false;
         body.SetActive(false);
         glowSphere.enabled = false;
         light.color = Color.red;
         trail.material = trailColor;
-        superJump = false;
 
         rigidbody.velocity = Vector3.zero;
         rigidbody.useGravity = false;
@@ -374,7 +378,7 @@ public class PlayerJump : MonoBehaviour
         light.color = Color.white;
 
         grounded = false;
-        canDash = false;
+        dashActive = false;
         Destroy(anchor);
 
         transform.position = Vector3.zero;

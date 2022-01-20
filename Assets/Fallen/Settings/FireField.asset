@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f462db9279744b47bf07842036f0eb8, type: 3}
+  m_Name: FireField
+  m_EditorClassIdentifier: 
+  enabled: 1
+  spawnTime: 10
+  startScore: 0
+  scoreRange: 1000
+  maxScore: -1
+  baseChance: 0.4
+  curvePower: 1
+  clampScales: 0
+  spawnsDuringSuperJump: 0
+  hazardBaseChance: 1000
+  minScale: 3
+  scaleRange: 9
+  offset: 2
+  distance: 350
+  safetyDistance: 100
+  velocityRange: 2
+  velocityRangeScaling: 10
+  spinRange: 2
+  spinRangeScaling: 3
+  cushion: 0.8
+  minAmount: 30
+  maxAmount: 60
+  failAmount: 10

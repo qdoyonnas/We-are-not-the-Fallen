@@ -6,7 +6,7 @@ using UnityEngine;
 public class Block : MonoBehaviour
 {
     public float massFactor = 1f;
-    public List<GameManager.BlockType> blockTypes;
+    public List<GameManager.BlockType> blockTypes = new List<GameManager.BlockType>();
     
     public float checkDestroyTime = 1f;
     public float destroyDistance = 240;
@@ -52,19 +52,22 @@ public class Block : MonoBehaviour
         rigidbody.mass = massFactor * GetSize();
         destructionThreshold = baseDestructionThreshold * GetSize();
     }
-    public void SetTypes( List<GameManager.BlockType> types )
+    public void SetTypes( List<GameManager.BlockType> blockTypes )
     {
-        blockTypes = types;
-
         Destroy(transform.GetChild(0).gameObject);
-
-        string prefabName;
-        if( blockTypes.Contains(GameManager.BlockType.goal) ) {
-            prefabName = "Goal";
-        } else if( blockTypes.Contains(GameManager.BlockType.hazard) ) {
-            prefabName = "Hazard";
+        if( blockTypes != null ) {
+            this.blockTypes = blockTypes;
         } else {
-            prefabName = "Standard";
+            this.blockTypes = new List<GameManager.BlockType>();
+        }
+
+        string prefabName = "Standard";
+        if( blockTypes != null ) {
+            if( blockTypes.Contains(GameManager.BlockType.goal) ) {
+                prefabName = "Goal";
+            } else if( blockTypes.Contains(GameManager.BlockType.hazard) ) {
+                prefabName = "Hazard";
+            }
         }
 
         GameObject prefab = Resources.Load<GameObject>("Prefabs/" + prefabName);
@@ -75,7 +78,9 @@ public class Block : MonoBehaviour
 
 	private void FixedUpdate()
 	{
-		rigidbody.velocity = new Vector3(rigidbody.velocity.x, rigidbody.velocity.y - blockGravity, 0);
+        if( !blockTypes.Contains(GameManager.BlockType.goal) ) {
+		    rigidbody.velocity = new Vector3(rigidbody.velocity.x, rigidbody.velocity.y - blockGravity, 0);
+        }
 	}
 	private void Update()
     {
@@ -109,14 +114,22 @@ public class Block : MonoBehaviour
         PlayerJump player = collision.gameObject.GetComponent<PlayerJump>();
         if( player != null ) {
             if( blockTypes.Contains(GameManager.BlockType.hazard) || blockTypes.Contains(GameManager.BlockType.rogue) ) {
-                if( blockTypes.Contains(GameManager.BlockType.rogue) ) { Debug.Log("Killed by rogue"); }
-                player.Die();
+                if( player.superJump ) {
+                    DestroyBlock();
+                } else {
+                    player.Die();
+                }
             }
             return;
         }
 
         Block block = collision.gameObject.GetComponent<Block>();
         if( block != null ) {
+            if( blockTypes.Contains(GameManager.BlockType.rogue) ) {
+                block.DestroyBlock();
+                return;
+            }
+
             float distance = Vector3.Distance(GameManager.Instance.player.transform.position, transform.position);
             float intensity = collision.impulse.magnitude * (shakeDistanceValue / distance) * shakeIntensityMultiplier;
             GameManager.Instance.activeCamera.CameraShake(0.5f, intensity);
@@ -173,5 +186,14 @@ public class Block : MonoBehaviour
         }
 
         checkDestroyTimeStamp = Time.time + 2f;
+
+        // Clear the player anchor if it was attached to this block
+        PlayerJump player = GameManager.Instance.player;
+        if( player != null && player.anchor != null ) {
+            if( player.anchor.transform.parent == transform ) {
+                Destroy(player.anchor);
+                player.grounded = false;
+            }
+        }
     }
 }

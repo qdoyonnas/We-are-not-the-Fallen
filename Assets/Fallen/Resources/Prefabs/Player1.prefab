@@ -286,8 +286,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isAlive: 1
+  canDash: 1
+  canSuperJumpDash: 1
   jumpFactor: 100
-  dashFactor: 50
+  dashFactor: 30
   dashMassFactor: 10
   forceMultiplier: 1000
   collisionDuration: 0.6
@@ -295,7 +297,7 @@ MonoBehaviour:
   groundedFriction: 1
   dashCooldown: 1
   dashTime: 0
-  superJumpDuration: 15
+  superJumpDuration: 5
   superJumpTime: 0
   effectSource: {fileID: 4340915675075637701}
   impactSpeedValue: 50
@@ -305,11 +307,12 @@ MonoBehaviour:
   windSpeedValue: 200
   flapSound: {fileID: 8300000, guid: af9044da07438b7448ee20dfdba4580a, type: 3}
   minGlideSpeed: 30
-  glideDelta: 0.5
+  glideDelta: 1
   trailColor: {fileID: 2100000, guid: c7a59442b2494c04ead60610e3029409, type: 2}
   superTrailColor: {fileID: 2100000, guid: 892a6834958d75543b509c5b2599a89d, type: 2}
   rigidbody: {fileID: 0}
-  canDash: 0
+  dashActive: 0
+  anchor: {fileID: 0}
 --- !u!136 &4340915675075637726
 CapsuleCollider:
   m_ObjectHideFlags: 0

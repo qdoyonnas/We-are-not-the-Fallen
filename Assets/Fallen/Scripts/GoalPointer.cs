@@ -24,15 +24,12 @@ public class GoalPointer : MonoBehaviour
         if( GameManager.Instance.goal != null ) {
             float goalDistance = Vector3.Distance(GameManager.Instance.player.transform.position, GameManager.Instance.goal.transform.position);
             if( goalDistance > distance ) {
-                MeshRenderer goalRenderer = GameManager.Instance.goal.GetComponentInChildren<MeshRenderer>();
-                if( !goalRenderer.isVisible ) {
-                    renderer.enabled = true;
+                renderer.enabled = true;
 
-                    Vector3 goalDirection = (GameManager.Instance.goal.transform.position - player.transform.position).normalized;
+                Vector3 goalDirection = (GameManager.Instance.goal.transform.position - player.transform.position).normalized;
 
-                    Vector3 center = player.transform.position + (Vector3.back);
-                    transform.position = center + (goalDirection * distance);
-                }
+                Vector3 center = player.transform.position + (Vector3.back);
+                transform.position = center + (goalDirection * distance);
             }
         }
     }

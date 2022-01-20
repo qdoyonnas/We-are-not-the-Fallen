@@ -16,7 +16,7 @@ public class Pointer : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        indicator.enabled = player.canDash;
+        indicator.enabled = player.dashActive;
 
         Vector3 point = GameManager.Instance.activeCamera.camera.ScreenToWorldPoint(Input.mousePosition);
         point.z = -1;

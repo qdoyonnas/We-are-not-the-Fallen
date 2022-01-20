@@ -158,8 +158,8 @@ MonoBehaviour:
   massFactor: 1.5
   blockTypes: 
   checkDestroyTime: 1
-  destroyDistance: 200
-  killVelocity: 30
+  destroyDistance: 1000
+  killVelocity: 50
   shakeDistanceValue: 10
   impactParticles: {fileID: 2858152505986081142, guid: 47d8d8799475ec1459837f3e7bced618,
     type: 3}
@@ -168,11 +168,11 @@ MonoBehaviour:
   flareParticles: {fileID: 2858152505986081142, guid: ebb0446de0192074ca67bfbba3f9bf81,
     type: 3}
   rigidbody: {fileID: 0}
-  collisionKillRangeModifier: 0.01
-  baseDestructionThreshold: 12
+  collisionKillRangeModifier: 0.008
+  baseDestructionThreshold: 20
   shakeIntensityMultiplier: 0.002
-  impactIntensityMultiplier: 0.003
-  blockGravity: 0.02
+  impactIntensityMultiplier: 0.002
+  blockGravity: 0.04
   doDestroy: 0
 --- !u!82 &4623515119534735792
 AudioSource:
